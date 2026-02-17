@@ -1,0 +1,12 @@
+{
+  "model_name": "bayes_design",
+  "protein_id": "1PIN",
+  "decode_order": "n_to_c",
+  "decode_algorithm": "beam",
+  "n_beams": 128,
+  "design_regions": {
+    "designable_core": {
+      "positions": "1-33"
+    }
+  }
+}

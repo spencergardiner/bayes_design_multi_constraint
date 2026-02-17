@@ -1,0 +1,17 @@
+{
+  "model_name": "bayes_design",
+  "pdb_path": "/home/ssgardin/inputs/EPO/wt_epo.pdb",
+  "decode_order": "random",
+  "decode_algorithm": "beam",
+  "n_beams": 128,
+  "design_regions": {
+    "surface_residues": {
+      "positions": "16, 24, 25, 27, 36, 38, 82, 83, 88, 90, 107, 119, 126, 133, 139, 163",
+      "allowed_aas": "STNQCYDE"
+    },
+    "core_residues": {
+      "positions": "32, 57, 135, 138"
+    }
+  },
+  "results_dir": "~/outputs/bayes_design/epo_surface_core_10p_homology"
+}

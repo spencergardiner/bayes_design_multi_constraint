@@ -11,7 +11,7 @@ from bayes_design.model import model_dict
 from bayes_design.utils import get_protein, AMINO_ACID_ORDER
 
 
-def evaluate_log_prob(seq, prob_model, decode_order, fixed_position_mask, mask_type, structure=None, exclude_aa=['C']):
+def evaluate_log_prob(seq, prob_model, decode_order, fixed_position_mask, mask_type, structure=None, aa_allowed_mask=None):
     """
     Evaluate the log probability of the structure for the sequence under a 
     sequence to structure model. This measures p(struct|seq) for a designed sequence.
@@ -28,8 +28,13 @@ def evaluate_log_prob(seq, prob_model, decode_order, fixed_position_mask, mask_t
     If fixed positions are provided, they are excluded from the log probability calculation.
     
     Args:
-        sequence (str): a string (no spaces) representing an amino acid sequence
-        seq_to_struct_model (nn.Module): a network taking as input a 
+        seq (str): a string (no spaces) representing an amino acid sequence
+        prob_model: a probability model
+        decode_order (list): ordering of positions for decoding
+        fixed_position_mask (np.ndarray): binary mask (1=fixed, 0=design)
+        mask_type (str): masking strategy
+        structure: protein structure tensor
+        aa_allowed_mask (np.ndarray, optional): shape (seq_len, 21), per-position AA mask
     """
     n_fixed_positions = int(fixed_position_mask.sum())
     n_predicted_positions = len(seq) - n_fixed_positions
@@ -37,8 +42,12 @@ def evaluate_log_prob(seq, prob_model, decode_order, fixed_position_mask, mask_t
     # Decode order defines the order in which the masked positions are predicted
     token_to_decode = torch.tensor(decode_order[n_fixed_positions:])
     probs = prob_model(seq=[seq]*n_predicted_positions, struct=structure, decode_order=decode_order, token_to_decode=token_to_decode, mask_type=mask_type)
-    for aa in exclude_aa:
-        probs[:, AMINO_ACID_ORDER.index(aa)] = 0
+    # Apply per-position amino acid mask
+    if aa_allowed_mask is not None:
+        for k, pos in enumerate(token_to_decode):
+            pos_idx = pos.item() if hasattr(pos, 'item') else int(pos)
+            pos_mask = torch.tensor(aa_allowed_mask[pos_idx, :probs.shape[1]], dtype=probs.dtype, device=probs.device)
+            probs[k] = probs[k] * pos_mask
     probs = probs / probs.sum(dim=1, keepdim=True)
     
     log_prob = 0
@@ -60,12 +69,12 @@ def evaluate_rmsd(sequence, seq_to_struct_model, targ_struct):
     (measured by evaluate_log_prob).
     """
 
-def evaluate_perplexity(seq, prob_model, decode_order, structure=None, fixed_position_mask=None, mask_type=None, exclude_aa=['C']):
+def evaluate_perplexity(seq, prob_model, decode_order, structure=None, fixed_position_mask=None, mask_type=None, aa_allowed_mask=None):
     """
     Evaluate the perplexity of the sequence under the model. If fixed positions are provided, they
     are excluded from the perplexity calculation.
     """
-    log_prob = evaluate_log_prob(seq=seq, prob_model=prob_model, decode_order=decode_order, structure=structure, fixed_position_mask=fixed_position_mask, mask_type=mask_type, exclude_aa=exclude_aa)
+    log_prob = evaluate_log_prob(seq=seq, prob_model=prob_model, decode_order=decode_order, structure=structure, fixed_position_mask=fixed_position_mask, mask_type=mask_type, aa_allowed_mask=aa_allowed_mask)
     n_fixed_positions = fixed_position_mask.sum()
     n = len(seq) - n_fixed_positions
     perplexity = np.exp(-1/n*log_prob)
@@ -76,7 +85,7 @@ def evaluate_recapitulation(pred_seq, orig_seq):
     Evaluate % recapitulation of the original sequence. This is a bad metric for 
     measuring p(struct|seq) because it really measures p(seq|struct).
     """
-    perc_recapitulate = (predict_seq == orig_seq).mean()
+    perc_recapitulate = (pred_seq == orig_seq).mean()
     return perc_recapitulate
 
 def evaluate_stability():

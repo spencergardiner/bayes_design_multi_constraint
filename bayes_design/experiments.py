@@ -10,13 +10,15 @@ import pickle as pkl
 from bayes_design.decode import decode_order_dict, decode_algorithm_dict
 from bayes_design.evaluate import metric_dict
 from bayes_design.model import model_dict, TrRosettaWrapper
-from bayes_design.utils import get_fixed_position_mask, get_protein, get_cb_coordinates, compute_distogram, AMINO_ACID_ORDER
+from bayes_design.utils import build_aa_allowed_mask, resolve_protein_input, get_cb_coordinates, compute_distogram, AMINO_ACID_ORDER
 
 
 def compare_seq_metric(args):
-    seq, structure = get_protein(args.protein_id)
+    seq, structure = resolve_protein_input(args)
     device = torch.device("cuda:1" if (torch.cuda.is_available()) else "cpu")
-    fixed_position_mask = get_fixed_position_mask(fixed_position_list=args.fixed_positions, seq_len=len(seq))
+    fixed_position_mask, aa_allowed_mask = build_aa_allowed_mask(
+        design_regions=args.design_regions, seq_len=len(seq)
+    )
     
     if args.redesign:
         mask_type = 'bidirectional_mlm'
@@ -37,7 +39,7 @@ def compare_seq_metric(args):
         masked_seq = ''.join(['-' if not fixed else char for char, fixed in zip(seq, fixed_position_mask)])
         # Decode order defines the order in which the masked positions are predicted
         decode_order = decode_order_dict[args.decode_order](masked_seq)
-        metric = metric_dict[args.metric](seq=seq, prob_model=prob_model, decode_order=decode_order, structure=structure, fixed_position_mask=fixed_position_mask, mask_type=mask_type)
+        metric = metric_dict[args.metric](seq=seq, prob_model=prob_model, decode_order=decode_order, structure=structure, fixed_position_mask=fixed_position_mask, mask_type=mask_type, aa_allowed_mask=aa_allowed_mask)
         scores.append(metric)
     
     return scores
@@ -69,9 +71,11 @@ def compare_struct_correlation(args):
     with trRosetta across multiple sequences for the same structure, but not across structures.
     """
     np.random.seed(0)
-    sequence, structure = get_protein(args.protein_id)
+    sequence, structure = resolve_protein_input(args)
     device = torch.device(args.device)
-    fixed_position_mask = get_fixed_position_mask(fixed_position_list=args.fixed_positions, seq_len=len(sequence))
+    fixed_position_mask, aa_allowed_mask = build_aa_allowed_mask(
+        design_regions=args.design_regions, seq_len=len(sequence)
+    )
     masked_seq = ''.join(['-' if not fixed else char for char, fixed in zip(sequence, fixed_position_mask)])
     # Decode order defines the order in which the masked positions are predicted
     decode_order = decode_order_dict[args.decode_order](masked_seq)
@@ -87,9 +91,9 @@ def compare_struct_correlation(args):
     log_p_trRosetta = []
     sequence_variants = generate_sequence_variants(orig_seq=sequence, num_variants=args.num_variants, perc_residues_to_mutate=args.perc_residues_to_mutate)
     for seq in sequence_variants:
-        log_p_protein_mpnn.append(metric_dict['log_prob'](seq=seq, prob_model=protein_mpnn, decode_order=args.decode_order, structure=structure, fixed_position_mask=fixed_position_mask, mask_type=mask_type))
-        log_p_bayes.append(metric_dict['log_prob'](seq=seq, prob_model=bayes_design, decode_order=args.decode_order, structure=structure, fixed_position_mask=fixed_position_mask, mask_type=mask_type))
-        log_p_trRosetta.append(get_trRosetta_log_prob(trRosetta=trRosetta, sequence=seq, protein_id=args.protein_id))
+        log_p_protein_mpnn.append(metric_dict['log_prob'](seq=seq, prob_model=protein_mpnn, decode_order=args.decode_order, structure=structure, fixed_position_mask=fixed_position_mask, mask_type=mask_type, aa_allowed_mask=aa_allowed_mask))
+        log_p_bayes.append(metric_dict['log_prob'](seq=seq, prob_model=bayes_design, decode_order=args.decode_order, structure=structure, fixed_position_mask=fixed_position_mask, mask_type=mask_type, aa_allowed_mask=aa_allowed_mask))
+        log_p_trRosetta.append(get_trRosetta_log_prob(trRosetta=trRosetta, sequence=seq, protein_id=getattr(args, 'protein_id', None), pdb_path=getattr(args, 'pdb_path', None)))
         
     # Make a matplotlib scatter plot of BayesDesign and trRosetta, with the Pearson correlation coefficient as the title
     fig, ax = plt.subplots()
@@ -97,7 +101,7 @@ def compare_struct_correlation(args):
     ax.set_xlabel('BayesDesign')
     ax.set_ylabel('trRosetta')
     ax.set_title(f'Pearson correlation coefficient: {np.corrcoef(log_p_bayes, log_p_trRosetta)[0, 1]:.3f}')
-    fig.savefig(os.path.join(args.results_dir, f'{args.protein_id}_bayes_trRosetta_scatter.png'))
+    fig.savefig(os.path.join(args.results_dir, f'{args.protein_label}_bayes_trRosetta_scatter.png'))
     plt.close(fig)
 
     # Make a matplotlib scatter plot of ProteinMPNN and trRosetta, with the Pearson correlation coefficient as the title
@@ -106,7 +110,7 @@ def compare_struct_correlation(args):
     ax.set_xlabel('ProteinMPNN')
     ax.set_ylabel('trRosetta')
     ax.set_title(f'Pearson correlation coefficient: {np.corrcoef(log_p_protein_mpnn, log_p_trRosetta)[0, 1]:.3f}')
-    fig.savefig(os.path.join(args.results_dir, f'{args.protein_id}_protein_mpnn_trRosetta_scatter.png'))
+    fig.savefig(os.path.join(args.results_dir, f'{args.protein_label}_protein_mpnn_trRosetta_scatter.png'))
     plt.close(fig)
 
 
@@ -138,9 +142,11 @@ def viz_probs(args):
     protein_mpnn = model_dict['protein_mpnn'](device=device)
     xlnet = model_dict['xlnet'](device=device)
 
-    seq, structure = get_protein(args.protein_id)
+    seq, structure = resolve_protein_input(args)
     
-    fixed_position_mask = get_fixed_position_mask(fixed_position_list=args.fixed_positions, seq_len=len(seq))
+    fixed_position_mask, aa_allowed_mask = build_aa_allowed_mask(
+        design_regions=args.design_regions, seq_len=len(seq)
+    )
     masked_seq = ''.join(['-' if not fixed else char for char, fixed in zip(seq, fixed_position_mask)])
     # Decode order defines the order in which the masked positions are predicted
     decode_order = decode_order_dict[args.decode_order](masked_seq)
@@ -193,25 +199,29 @@ def viz_probs(args):
     plt.savefig(args.results_path)
 
 
-def get_trRosetta_log_prob(trRosetta, sequence, protein_id):
+def get_trRosetta_log_prob(trRosetta, sequence, protein_id=None, pdb_path=None):
     """Get the log probability of a ground truth structure for a given sequence by computing the trRosetta probability
     of that structure given the sequence
 
     Args:
         trRosetta (nn.Module): a trRosetta model
         sequence (str): a protein sequence
-        protein_id (str): the protein ID of the protein sequence
+        protein_id (str, optional): the protein ID of the protein sequence
+        pdb_path (str, optional): path to a local PDB file (used for CB coordinates)
     Returns:
         log_prob (float): the log probability of the structure for the given sequence
     """
     # Get true distances
-    cb_coordinates_true = get_cb_coordinates(protein_id)
+    cb_coordinates_true = get_cb_coordinates(pdb_code=protein_id, pdb_path=pdb_path)
     cb_distogram_true = compute_distogram(cb_coordinates_true)
     cb_distogram_true_idx = torch.argmax(cb_distogram_true, dim=-1)
     
+    # For trRosetta, use protein_id as seq_id when available, otherwise derive from pdb_path
+    seq_id = protein_id if protein_id is not None else os.path.splitext(os.path.basename(pdb_path))[0]
+    
     with torch.no_grad():
         # Get trRosetta-predicted distogram for sequence
-        cb_distogram_predicted = torch.tensor(trRosetta(sequence, seq_id=protein_id))
+        cb_distogram_predicted = torch.tensor(trRosetta(sequence, seq_id=seq_id))
         # Edit predicted distogram to correspond to a more sensible, ordered layout, with not-in-contact next to the largest distances
         cb_distogram_predicted = torch.cat((cb_distogram_predicted[..., 1:], cb_distogram_predicted[..., :1]), dim=-1)
         # Make the diagonal entries correspond to the lowest distance bin, not the not-in-contact bin
@@ -254,7 +264,7 @@ def make_hist(args):
     scores = compare_seq_metric(args)
     plt.hist(scores, bins=100)
     plt.xlabel(f'{args.metric}')
-    plt.savefig(os.path.join(args.results_dir, f'{args.model_name}_{args.metric}_{args.protein_id}_hist.png'))
+    plt.savefig(os.path.join(args.results_dir, f'{args.model_name}_{args.metric}_{args.protein_label}_hist.png'))
 
 def seq_filter(args):
     scores = compare_seq_metric(args)

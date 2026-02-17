@@ -78,7 +78,8 @@ def get_random_decode_order(seq):
     all_indices = np.arange(len(seq))
     indices_to_predict = [i for i, char in zip(all_indices, seq) if char == '-']
     fixed_indices = [i for i, char in zip(all_indices, seq) if char != '-']
-    decode_order = fixed_indices + random.shuffle(indices_to_predict)
+    random.shuffle(indices_to_predict)
+    decode_order = fixed_indices + indices_to_predict
     return decode_order
 
 def get_n_to_c_decode_order(seq):
@@ -104,7 +105,7 @@ def get_n_to_c_decode_order(seq):
 # Decode Algorithms
 ####################################################################################
 
-def decode_combinations(prob_model, struct, seq, unmasked_seq, decode_order, fixed_position_mask, from_scratch, exclude_aa=['C'], **kwargs):
+def decode_combinations(prob_model, struct, seq, unmasked_seq, decode_order, fixed_position_mask, from_scratch, aa_allowed_mask=None, **kwargs):
     """Consider all combinations of 6 positions from a set of 19 given positions (indicated by the unfixed positions in the fixed position mask). Use an n to c decode order for each combination of positions. 
     Greedy decode. Select the three decoded sequences with the highest probability. Repeat for 5, 4, 3, 2, and 1 position. 
     """
@@ -133,8 +134,8 @@ def decode_combinations(prob_model, struct, seq, unmasked_seq, decode_order, fix
             # Update fixed positions to include all positions except the masked positions
             fixed_position_mask = np.array([1 if char != '-' else 0 for char in masked_seq])
             decode_order = get_n_to_c_decode_order(masked_seq)
-            orig_log_prob = metric_dict['log_prob'](seq=unmasked_seq, prob_model=prob_model, decode_order=decode_order, structure=struct, fixed_position_mask=fixed_position_mask, mask_type=mask_type, exclude_aa=exclude_aa)
-            decoded_seq, new_log_prob = greedy_decode(prob_model=prob_model, struct=struct, seq=''.join(masked_seq), decode_order=decode_order, fixed_position_mask=fixed_position_mask, from_scratch=from_scratch, exclude_aa=exclude_aa, return_prob=True, **kwargs)
+            orig_log_prob = metric_dict['log_prob'](seq=unmasked_seq, prob_model=prob_model, decode_order=decode_order, structure=struct, fixed_position_mask=fixed_position_mask, mask_type=mask_type, aa_allowed_mask=aa_allowed_mask)
+            decoded_seq, new_log_prob = greedy_decode(prob_model=prob_model, struct=struct, seq=''.join(masked_seq), decode_order=decode_order, fixed_position_mask=fixed_position_mask, from_scratch=from_scratch, aa_allowed_mask=aa_allowed_mask, return_prob=True, **kwargs)
             log_prob_diff = new_log_prob - orig_log_prob
             # if log_prob in the top n_seq_per_position, add it to the list
             if len(top_probs) < n_seq_per_position:
@@ -153,7 +154,7 @@ def decode_combinations(prob_model, struct, seq, unmasked_seq, decode_order, fix
 
     return decoded_seqs
 
-def max_prob_decode(prob_model, struct, seq, unmasked_seq, decode_order, fixed_position_mask, from_scratch, n_decoded=20, exclude_aa=['C'], **kwargs):
+def max_prob_decode(prob_model, struct, seq, unmasked_seq, decode_order, fixed_position_mask, from_scratch, n_decoded=20, aa_allowed_mask=None, **kwargs):
     # Select unfixed positions (e.g. 63-96)
     # Evaluate the probability of every different amino acid at each unfixed position
     # Select residue with highest margin between p(struct|seq_i=true_aa) and p(struct|seq_i=best_alternate_aa).
@@ -179,9 +180,15 @@ def max_prob_decode(prob_model, struct, seq, unmasked_seq, decode_order, fixed_p
         token_to_decode = decode_order[n_fixed_positions + i:]
         # Get probabilities for every amino acid for every eligible position
         probs = prob_model(seq=[''.join(current_seq)]*len(token_to_decode), struct=struct, decode_order=decode_order, token_to_decode=token_to_decode, mask_type=mask_type)
-        for aa in exclude_aa:
-            probs[:, AMINO_ACID_ORDER.index(aa)] = 0
-        probs = probs / probs.sum(dim=1, keepdim=True)
+        # Apply per-position amino acid mask
+        if aa_allowed_mask is not None:
+            for k, pos in enumerate(token_to_decode):
+                pos_mask = torch.tensor(aa_allowed_mask[pos, :probs.shape[1]], dtype=probs.dtype, device=probs.device)
+                probs[k] = probs[k] * pos_mask
+        # Normalize with epsilon to prevent division by zero
+        prob_sums = probs.sum(dim=1, keepdim=True)
+        prob_sums = torch.clamp(prob_sums, min=1e-12)
+        probs = probs / prob_sums
         # Select the position and amino acid for which the difference in probability between the true amino acid and the best alternate amino acid is the largest
         token_to_decode_true_aa_indices = [AMINO_ACID_ORDER.index(unmasked_seq[j]) for j in token_to_decode]
         true_probs = probs[range(len(token_to_decode)), token_to_decode_true_aa_indices] # N
@@ -202,7 +209,7 @@ def max_prob_decode(prob_model, struct, seq, unmasked_seq, decode_order, fixed_p
     return seqs
 
         
-def greedy_decode(prob_model, struct, seq, decode_order, fixed_position_mask, from_scratch, exclude_aa=['C'], return_prob=False, **kwargs):
+def greedy_decode(prob_model, struct, seq, decode_order, fixed_position_mask, from_scratch, aa_allowed_mask=None, return_prob=False, **kwargs):
     if from_scratch:
         mask_type = 'bidirectional_autoregressive'
     else:
@@ -214,9 +221,16 @@ def greedy_decode(prob_model, struct, seq, decode_order, fixed_position_mask, fr
             # Do not change this token
             continue
         probs = prob_model(seq=[current_seq], struct=struct, decode_order=decode_order, token_to_decode=torch.tensor([idx]), mask_type=mask_type)
-        for aa in exclude_aa:
-            probs[0, AMINO_ACID_ORDER.index(aa)] = 0
-        probs = probs / torch.sum(probs, dim=1, keepdim=True)
+        # Apply per-position amino acid mask
+        if aa_allowed_mask is not None:
+            pos_mask = torch.tensor(aa_allowed_mask[idx, :probs.shape[1]], dtype=probs.dtype, device=probs.device)
+            probs[0] = probs[0] * pos_mask
+        # Normalize with epsilon to prevent division by zero
+        prob_sums = torch.sum(probs, dim=1, keepdim=True)
+        prob_sums = torch.clamp(prob_sums, min=1e-12)
+        probs = probs / prob_sums
+        # Clamp to avoid log(0)
+        probs = torch.clamp(probs, min=1e-12)
         next_item = torch.argmax(probs)
         log_probs.append(np.log(np.max(probs.detach().cpu().numpy())))
         aa = AMINO_ACID_ORDER[next_item]
@@ -229,7 +243,7 @@ def greedy_decode(prob_model, struct, seq, decode_order, fixed_position_mask, fr
     else:
         return current_seq
 
-def sample_decode(prob_model, struct, seq, decode_order, fixed_position_mask, from_scratch, exclude_aa, temperature=1.0, **kwargs):
+def sample_decode(prob_model, struct, seq, decode_order, fixed_position_mask, from_scratch, aa_allowed_mask=None, temperature=1.0, **kwargs):
     assert not isinstance(prob_model, BayesDesign), "BayesDesign objective only applies when maximizing probability"
     if from_scratch:
         mask_type = 'bidirectional_autoregressive'
@@ -242,10 +256,18 @@ def sample_decode(prob_model, struct, seq, decode_order, fixed_position_mask, fr
             # Do not change this token
             continue
         probs = prob_model(seq=[current_seq], struct=struct, decode_order=decode_order, token_to_decode=torch.tensor([idx]), mask_type=mask_type, temperature=temperature).detach().cpu().numpy()
-        for aa in exclude_aa:
-            probs[0, AMINO_ACID_ORDER.index(aa)] = 0
-        probs = probs / torch.sum(probs, dim=1, keepdim=True).detach().cpu().numpy()
-        next_item = np.random.choice(np.arange(20), p=probs[0])
+        # Apply per-position amino acid mask
+        if aa_allowed_mask is not None:
+            probs[0] = probs[0] * aa_allowed_mask[idx, :probs.shape[1]]
+        # Normalize with epsilon to prevent division by zero
+        prob_sums = probs.sum(axis=1, keepdims=True)
+        prob_sums = np.clip(prob_sums, 1e-12, None)
+        probs = probs / prob_sums
+        # Clamp to avoid numerical issues with np.random.choice
+        probs = np.clip(probs, 1e-12, 1.0)
+        # Renormalize after clamping to ensure sum=1
+        probs = probs / probs.sum(axis=1, keepdims=True)
+        next_item = np.random.choice(np.arange(probs.shape[1]), p=probs[0])
 
         aa = AMINO_ACID_ORDER[next_item]
         current_seq = list(current_seq)
@@ -253,13 +275,17 @@ def sample_decode(prob_model, struct, seq, decode_order, fixed_position_mask, fr
         current_seq = ''.join(current_seq)
     return current_seq
 
-def random_decode(prob_model, struct, seq, decode_order, fixed_position_mask, exclude_aa, **kwargs):
+def random_decode(prob_model, struct, seq, decode_order, fixed_position_mask, aa_allowed_mask=None, **kwargs):
     current_seq = seq
-    eligible_aa_idxs = [i for i in range(20) if AMINO_ACID_ORDER[i] not in exclude_aa]
     for idx in decode_order:
         if fixed_position_mask[idx] == True:
             # Do not change this token
             continue
+        # Determine eligible amino acids for this position
+        if aa_allowed_mask is not None:
+            eligible_aa_idxs = [i for i in range(20) if aa_allowed_mask[idx, i] > 0]
+        else:
+            eligible_aa_idxs = list(range(20))
         next_item = np.random.choice(eligible_aa_idxs)
         aa = AMINO_ACID_ORDER[next_item]
         current_seq = list(current_seq)
@@ -267,7 +293,7 @@ def random_decode(prob_model, struct, seq, decode_order, fixed_position_mask, ex
         current_seq = ''.join(current_seq)
     return current_seq
 
-def beam_decode(prob_model, struct, seq, decode_order, fixed_position_mask, exclude_aa, from_scratch, n_beams, **kwargs):
+def beam_decode(prob_model, struct, seq, decode_order, fixed_position_mask, aa_allowed_mask=None, from_scratch=True, n_beams=16, **kwargs):
 
     # Get device of prob_model
     device = next(prob_model.parameters()).device
@@ -294,9 +320,16 @@ def beam_decode(prob_model, struct, seq, decode_order, fixed_position_mask, excl
             probs = prob_model.forward(seq=seqs[i:i + n_concurrent_seqs], struct=struct, decode_order=decode_order, token_to_decode=torch.tensor([decode_idx]).expand(len(seqs[i:i + n_concurrent_seqs])), mask_type=mask_type)
             probs_list.append(probs)
         top_candidate_probs = torch.concat(probs_list, dim=0)
-        for aa in exclude_aa:
-            top_candidate_probs[:, AMINO_ACID_ORDER.index(aa)] = 0
-        top_candidate_probs = top_candidate_probs / torch.sum(top_candidate_probs, dim=1, keepdim=True)
+        # Apply per-position amino acid mask
+        if aa_allowed_mask is not None:
+            pos_mask = torch.tensor(aa_allowed_mask[decode_idx, :top_candidate_probs.shape[1]], dtype=top_candidate_probs.dtype, device=top_candidate_probs.device)
+            top_candidate_probs = top_candidate_probs * pos_mask.unsqueeze(0)
+        # Normalize with epsilon to prevent division by zero
+        prob_sums = torch.sum(top_candidate_probs, dim=1, keepdim=True)
+        prob_sums = torch.clamp(prob_sums, min=1e-12)  # Prevent division by zero
+        top_candidate_probs = top_candidate_probs / prob_sums
+        # Clamp probabilities to avoid log(0)
+        top_candidate_probs = torch.clamp(top_candidate_probs, min=1e-12, max=1.0)
         all_candidates = []
         for ((current_seq, score), next_aa_probs) in zip(top_candidates, top_candidate_probs):
             for i, prob in enumerate(next_aa_probs.tolist()):

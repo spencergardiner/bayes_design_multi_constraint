@@ -1,0 +1,24 @@
+{
+    "protein_id": "6MRR",
+    "model_name": "bayes_design",
+    "decode_order": "n_to_c",
+    "decode_algorithm": "beam",
+    "n_beams": 128,
+    "bayes_balance_factor": 0.002,
+    "temperature": 1.0,
+    "seed": 0,
+    "results_dir": "./results",
+    "design_regions": {
+        "loop1": {
+            "positions": "63-68",
+            "excluded_aas": "C"
+        },
+        "active_site": {
+            "positions": "12,14,17",
+            "allowed_aas": "DEHKNQRST"
+        },
+        "helix_cap": {
+            "positions": "30-35,40-45"
+        }
+    }
+}

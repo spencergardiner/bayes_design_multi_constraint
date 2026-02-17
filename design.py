@@ -4,18 +4,24 @@ import pickle as pkl
 import numpy as np
 import random
 import os
+import json
 
 from bayes_design.decode import decode_order_dict, decode_algorithm_dict
 from bayes_design.model import model_dict
-from bayes_design.utils import get_protein, get_fixed_position_mask
+from bayes_design.utils import (
+    resolve_protein_input, build_aa_allowed_mask,
+    load_config_and_merge, parse_design_regions_arg,
+)
 
 parser = argparse.ArgumentParser()
 
+parser.add_argument('--config', help="Path to a JSON config file. Values in the config override CLI arguments.", default=None)
 parser.add_argument('--model_name', help="The model to use for protein sequence design", choices=list(model_dict.keys()), default='bayes_design')
-parser.add_argument('--protein_id', help="The PDB id of the protein to redesign", default='6MRR')
+parser.add_argument('--protein_id', help="The PDB id of the protein to redesign (provide this or --pdb_path)", default=None)
+parser.add_argument('--pdb_path', help="Path to a local PDB file to use as the backbone structure (provide this or --protein_id)", default=None)
 parser.add_argument('--decode_order', help="The order to decode masked parts of the sequence", choices=list(decode_order_dict.keys()), default='n_to_c')
 parser.add_argument('--decode_algorithm', help="The algorithm used to decode masked parts of the sequence", choices=list(decode_algorithm_dict.keys()), default='beam')
-parser.add_argument('--fixed_positions', help="The beginnings and ends of residue ranges (includes endpoints [], 1-indexed) to remain fixed and not predicted, separated by spaces. Example: 3 10 14 14 17 20", nargs='*', type=int, default=[])
+parser.add_argument('--design_regions', help='JSON string defining named design regions. Positions not in any region are fixed. Example: \'{"loop": {"positions": "63-96", "excluded_aas": "C"}}\'', type=str, default='{}')
 parser.add_argument('--n_beams', help="The number of beams, if using beam search decoding", type=int, default=16)
 parser.add_argument('--redesign', help="Whether to redesign an existing sequence, using the existing sequence as bidirectional context. Default is to design from scratch.", action="store_true")
 parser.add_argument('--device', help="The GPU index to use", type=int, default=0)
@@ -24,7 +30,6 @@ parser.add_argument('--temperature', help='The temperature to use for sampling',
 parser.add_argument('--n_designs', help='The number of designs to generate', default=1, type=int)
 parser.add_argument('--seed', help='The random seed to use', default=0, type=int)
 parser.add_argument('--results_dir', help='The directory to save results to', default='./results')
-parser.add_argument('--exclude_aa', nargs='+', default=[])
 
 subparsers = parser.add_subparsers(help="Whether to run an experiment instead of using the base design functionality")
 experiment_parser = subparsers.add_parser('experiment')
@@ -41,10 +46,13 @@ def example_design(args):
         prob_model = model_dict[args.model_name](device=device)
 
     # Get sequence and structure of protein to redesign
-    seq, struct = get_protein(args.protein_id)
+    seq, struct = resolve_protein_input(args)
     orig_seq = seq
 
-    fixed_position_mask = get_fixed_position_mask(fixed_position_list=args.fixed_positions, seq_len=len(seq))
+    # Build per-position amino acid constraint masks from design_regions
+    fixed_position_mask, aa_allowed_mask = build_aa_allowed_mask(
+        design_regions=args.design_regions, seq_len=len(seq)
+    )
     masked_seq = ''.join(['-' if not fixed else char for char, fixed in zip(seq, fixed_position_mask)])
 
     # Decode order defines the order in which the masked positions are predicted
@@ -63,15 +71,15 @@ def example_design(args):
     random.seed(args.seed)
 
     if args.decode_algorithm in ['max_prob_decode', 'combinations']:
-        designed_seqs = decode_algorithm_dict[args.decode_algorithm](prob_model=prob_model, struct=struct, seq=seq, unmasked_seq=orig_seq, decode_order=decode_order, fixed_position_mask=fixed_position_mask, from_scratch=from_scratch, temperature=args.temperature, n_beams=args.n_beams, exclude_aa=args.exclude_aa)
+        designed_seqs = decode_algorithm_dict[args.decode_algorithm](prob_model=prob_model, struct=struct, seq=seq, unmasked_seq=orig_seq, decode_order=decode_order, fixed_position_mask=fixed_position_mask, from_scratch=from_scratch, temperature=args.temperature, n_beams=args.n_beams, aa_allowed_mask=aa_allowed_mask)
     else:
         designed_seqs = []
         for i in range(args.n_designs):
-            designed_seq = decode_algorithm_dict[args.decode_algorithm](prob_model=prob_model, struct=struct, seq=seq, unmasked_seq=orig_seq, decode_order=decode_order, fixed_position_mask=fixed_position_mask, from_scratch=from_scratch, temperature=args.temperature, n_beams=args.n_beams, exclude_aa=args.exclude_aa)
+            designed_seq = decode_algorithm_dict[args.decode_algorithm](prob_model=prob_model, struct=struct, seq=seq, unmasked_seq=orig_seq, decode_order=decode_order, fixed_position_mask=fixed_position_mask, from_scratch=from_scratch, temperature=args.temperature, n_beams=args.n_beams, aa_allowed_mask=aa_allowed_mask)
             designed_seqs.append(designed_seq)
 
     os.makedirs(args.results_dir, exist_ok=True)
-    with open(os.path.join(args.results_dir, f'{args.model_name}_{args.protein_id}_sequences.txt'), 'w') as f:
+    with open(os.path.join(args.results_dir, f'{args.model_name}_{args.protein_label}_sequences.txt'), 'w') as f:
         for seq in designed_seqs:
             f.write(seq + '\n')
 
@@ -80,10 +88,12 @@ def example_design(args):
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    args = load_config_and_merge(args, parser)
+    args = parse_design_regions_arg(args)
     
     seqs = example_design(args)
     if args.n_designs > 1:
-        print(f"Designs written to {args.results_dir}/{args.model_name}_{args.protein_id}_sequences.txt")
+        print(f"Designs written to {args.results_dir}/{args.model_name}_{args.protein_label}_sequences.txt")
     else:
         for k, v in seqs.items():
             print(f"{k}: {v}")
