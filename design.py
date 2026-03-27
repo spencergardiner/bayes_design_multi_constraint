@@ -13,6 +13,9 @@ from bayes_design.utils import (
     load_config_and_merge, parse_design_regions_arg,
 )
 
+# FORCE HF into offline mode
+os.environ["HF_HUB_OFFLINE"] = "1"
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--config', help="Path to a JSON config file. Values in the config override CLI arguments.", default=None)
@@ -30,7 +33,7 @@ parser.add_argument('--temperature', help='The temperature to use for sampling',
 parser.add_argument('--n_designs', help='The number of designs to generate', default=1, type=int)
 parser.add_argument('--seed', help='The random seed to use', default=0, type=int)
 parser.add_argument('--results_dir', help='The directory to save results to', default='./results')
-
+parser.add_argument('--consider_wt_aa', help='If set, the wild-type amino acid is always included in the allowed set for design positions', action="store_true")
 subparsers = parser.add_subparsers(help="Whether to run an experiment instead of using the base design functionality")
 experiment_parser = subparsers.add_parser('experiment')
 experiment_parser.add_argument('--name', help='The name of the experiment to run')
@@ -51,7 +54,7 @@ def example_design(args):
 
     # Build per-position amino acid constraint masks from design_regions
     fixed_position_mask, aa_allowed_mask = build_aa_allowed_mask(
-        design_regions=args.design_regions, seq_len=len(seq)
+        design_regions=args.design_regions, seq_len=len(seq), seq=seq, consider_wt_aa=args.consider_wt_aa
     )
     masked_seq = ''.join(['-' if not fixed else char for char, fixed in zip(seq, fixed_position_mask)])
 

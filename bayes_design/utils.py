@@ -166,7 +166,7 @@ def parse_position_string(position_str):
 # Design Region Constraints
 ####################################################################################
 
-def build_aa_allowed_mask(design_regions, seq_len):
+def build_aa_allowed_mask(design_regions, seq_len, seq=None, consider_wt_aa=False):
     """Build position-level masks from a design_regions specification.
 
     Positions NOT in any design region are treated as fixed (kept from the original sequence).
@@ -182,6 +182,8 @@ def build_aa_allowed_mask(design_regions, seq_len):
             }
 
         seq_len (int): Total length of the protein sequence.
+        seq (str, optional): The wild-type sequence. Required if consider_wt_aa is True.
+        consider_wt_aa (bool, optional): If True, include the wild-type amino acid in the allowed set for design positions.
 
     Returns:
         tuple: (fixed_position_mask, aa_allowed_mask)
@@ -281,6 +283,13 @@ def build_aa_allowed_mask(design_regions, seq_len):
                 aa_allowed_mask[pos, :20] = 1.  # Start with all allowed
                 for aa in aa_spec[1]:
                     aa_allowed_mask[pos, AMINO_ACID_ORDER.index(aa)] = 0.
+            
+            if consider_wt_aa:
+                if seq is None:
+                    raise ValueError("seq must be provided if consider_wt_aa is True")
+                wt_aa = seq[pos]
+                if wt_aa in AMINO_ACID_ORDER:
+                    aa_allowed_mask[pos, AMINO_ACID_ORDER.index(wt_aa)] = 1.
 
     return fixed_position_mask, aa_allowed_mask
 
