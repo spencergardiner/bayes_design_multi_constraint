@@ -1,0 +1,6 @@
+sentencepiece
+transformers
+tokenizers
+tr-rosetta-pytorch
+tiktoken
+protobuf

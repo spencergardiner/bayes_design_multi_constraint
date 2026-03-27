@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bayes_design"
+version = "0.1.0"
+description = "Bayesian protein sequence design using language models and structural constraints"
+readme = "README.md"
+license = {text = "LICENSE"}
+authors = [
+    {name = "BayesDesign Contributors"},
+]
+requires-python = ">=3.8"
+
+dependencies = [
+    "sentencepiece",
+    "transformers",
+    "tokenizers",
+    "tr-rosetta-pytorch",
+    "tiktoken",
+    "protobuf",
+]
+
+[project.scripts]
+design = "bayes_design.design:main"
+score_sequences = "bayes_design.score_sequences:main"
+
+[project.urls]
+Homepage = "https://github.com/spencergardiner/bayes_design_multi_constraint"
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+bayes_design = ["protein_mpnn/vanilla_model_weights/*.pt"]

@@ -20,10 +20,8 @@ def compare_seq_metric(args):
         design_regions=args.design_regions, seq_len=len(seq)
     )
     
-    if args.redesign:
-        mask_type = 'bidirectional_mlm'
-    else:
-        mask_type = 'bidirectional_autoregressive'
+    # Always use bidirectional MLM context for sequence metric comparison
+    mask_type = 'bidirectional_mlm'
     
     if args.model_name == 'bayes_design':
         prob_model = model_dict[args.model_name](device=device, bayes_balance_factor=args.bayes_balance_factor)

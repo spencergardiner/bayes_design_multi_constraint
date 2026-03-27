@@ -26,7 +26,7 @@ parser.add_argument('--decode_order', help="The order to decode masked parts of 
 parser.add_argument('--decode_algorithm', help="The algorithm used to decode masked parts of the sequence", choices=list(decode_algorithm_dict.keys()), default='beam')
 parser.add_argument('--design_regions', help='JSON string defining named design regions. Positions not in any region are fixed. Example: \'{"loop": {"positions": "63-96", "excluded_aas": "C"}}\'', type=str, default='{}')
 parser.add_argument('--n_beams', help="The number of beams, if using beam search decoding", type=int, default=16)
-parser.add_argument('--redesign', help="Whether to redesign an existing sequence, using the existing sequence as bidirectional context. Default is to design from scratch.", action="store_true")
+
 parser.add_argument('--device', help="The GPU index to use", type=int, default=0)
 parser.add_argument('--bayes_balance_factor', help='A balancing factor to avoid a high probability ratio in the tails of the distribution. Suggested value: 0.002', default=0.002, type=float)
 parser.add_argument('--temperature', help='The temperature to use for sampling', default=1.0, type=float)
@@ -39,7 +39,7 @@ experiment_parser = subparsers.add_parser('experiment')
 experiment_parser.add_argument('--name', help='The name of the experiment to run')
 
 
-def example_design(args):
+def design_seqs(args):
 
     device = torch.device(f"cuda:{args.device}" if (torch.cuda.is_available()) else "cpu")
     
@@ -61,12 +61,11 @@ def example_design(args):
     # Decode order defines the order in which the masked positions are predicted
     decode_order = decode_order_dict[args.decode_order](masked_seq)
     
-    if args.redesign:
-        pass
-    else:
-        seq = masked_seq
-    
-    from_scratch = not args.redesign
+    # Always use redesign mode (bidirectional MLM context): keep full sequence context and use
+    # bidirectional attention during decoding. This allows the model to condition predictions on
+    # both fixed and variable positions, optimizing for sequence-to-structure plausibility.
+    # seq remains the original sequence (not masked)
+    from_scratch = False
     
     # Set random seeds
     torch.manual_seed(args.seed)
@@ -94,7 +93,7 @@ if __name__ == '__main__':
     args = load_config_and_merge(args, parser)
     args = parse_design_regions_arg(args)
     
-    seqs = example_design(args)
+    seqs = design_seqs(args)
     if args.n_designs > 1:
         print(f"Designs written to {args.results_dir}/{args.model_name}_{args.protein_label}_sequences.txt")
     else:

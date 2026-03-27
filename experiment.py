@@ -28,7 +28,6 @@ compare_seq_probs_parser.add_argument('--metric', help="The metric with which to
 compare_seq_probs_parser.add_argument('--decode_order', help="The order to decode masked parts of the sequence", choices=list(decode_order_dict.keys()), default='n_to_c')
 compare_seq_probs_parser.add_argument('--design_regions', help='JSON string defining named design regions', type=str, default='{}')
 compare_seq_probs_parser.add_argument('--bayes_balance_factor', help='A balancing factor to avoid a high probability ratio in the tails of the distribution. Suggested value: 0.002', default=0.002, type=float)
-compare_seq_probs_parser.add_argument('--redesign', help="Whether to redesign an existing sequence, using the existing sequence as bidirectional context. Default is to design from scratch.", action="store_true")
 compare_seq_probs_parser.add_argument('--pssm_path', help='The path to a PSSM file used to score a sequence', default=None)
 compare_seq_probs_parser.set_defaults(func=compare_seq_metric)
 
@@ -78,7 +77,6 @@ hist_parser.add_argument('--metric', help="The metric with which to evaluate the
 hist_parser.add_argument('--decode_order', help="The order to decode masked parts of the sequence", choices=list(decode_order_dict.keys()), default='n_to_c')
 hist_parser.add_argument('--design_regions', help='JSON string defining named design regions', type=str, default='{}')
 hist_parser.add_argument('--bayes_balance_factor', help='A balancing factor to avoid a high probability ratio in the tails of the distribution. Suggested value: 0.002', default=0.002, type=float)
-hist_parser.add_argument('--redesign', help="Whether to redesign the sequence", action="store_true")
 hist_parser.add_argument('--pssm_path', help='Path to the pssm file', default=None)
 hist_parser.add_argument('--results_dir', help="The directory to store results", default='./results')
 hist_parser.set_defaults(func=make_hist)
@@ -95,7 +93,6 @@ seq_filter_parser.add_argument('--metric', help="The metric with which to evalua
 seq_filter_parser.add_argument('--decode_order', help="The order to decode masked parts of the sequence", choices=list(decode_order_dict.keys()), default='n_to_c')
 seq_filter_parser.add_argument('--design_regions', help='JSON string defining named design regions', type=str, default='{}')
 seq_filter_parser.add_argument('--bayes_balance_factor', help='A balancing factor to avoid a high probability ratio in the tails of the distribution. Suggested value: 0.002', default=0.002, type=float)
-seq_filter_parser.add_argument('--redesign', help="Whether to redesign the sequence", action="store_true")
 seq_filter_parser.add_argument('--pssm_path', help='Path to the pssm file', default=None)
 seq_filter_parser.add_argument('--results_dir', help="The directory to store results", default='./results')
 seq_filter_parser.add_argument('--n_seqs', help="The number of sequences to select", default=10, type=int)

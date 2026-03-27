@@ -1,0 +1,3 @@
+[console_scripts]
+design = bayes_design.design:main
+score_sequences = bayes_design.score_sequences:main
