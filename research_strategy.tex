@@ -1,0 +1,210 @@
+% ============================================================================
+%  R21 Research Strategy — NIH NIGMS
+%  Environment-Conditioned Boltzmann Emulator for Macromolecular Assemblies
+% ============================================================================
+%
+%  Compile: xelatex research_strategy ; biber research_strategy ; xelatex x2
+%  Bibliography: Dissertation.bib
+%  Figures:  fig_aims.pdf, fig_model.pdf (in same directory)
+%
+%  NIH R21: 6-page limit for Research Strategy
+%  11 pt Arial/Helvetica, 0.5" margins, single-spaced
+% ============================================================================
+
+\documentclass[11pt]{article}
+
+% --- NIH-compatible geometry ------------------------------------------------
+\usepackage[letterpaper,margin=0.5in]{geometry}
+
+% --- Fonts (Helvetica for Arial-compatible look) ----------------------------
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[T1]{fontenc}
+\usepackage{placeins}
+
+% --- Packages ---------------------------------------------------------------
+\usepackage[expansion=false,protrusion=true]{microtype}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\usepackage[style=numeric,backend=biber,sorting=none]{biblatex}
+\addbibresource{Dissertation.bib}
+\usepackage[normalem]{ulem}
+\usepackage{xspace}
+
+% --- Compact spacing --------------------------------------------------------
+\singlespacing
+\setlength{\parskip}{2pt}
+\setlength{\parindent}{0pt}
+\setlist{nosep,leftmargin=1.2em}
+
+% --- Section heading styling ------------------------------------------------
+\titleformat{\section}{\normalsize\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\small\bfseries\itshape}{\thesubsubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{6pt}{2pt}
+\titlespacing*{\subsection}{0pt}{4pt}{1pt}
+\titlespacing*{\subsubsection}{0pt}{3pt}{0pt}
+
+% --- Shortcuts --------------------------------------------------------------
+\newcommand{\ECCD}{ECCD\xspace}
+
+% ============================================================================
+\begin{document}
+
+\begin{center}
+{\large\bfseries RESEARCH STRATEGY}\\[2pt]
+{\small\itshape Learning an Environment-Conditioned Landscape for Equilibrium Structures of Macromolecular Assemblies}
+\end{center}
+
+% ============================================================================
+\section{Significance}
+% ============================================================================
+
+\textbf{1.1 Protein function is an environment-conditioned, multi-molecule problem, but current predictive tools treat it as a single-molecule, single-structure problem.} Recent advances have transformed static structure prediction: AlphaFold2 and its many competitors and descendants now achieve near-experimental accuracy for a wide variety of monomers and complexes~\cite{jumper_AlphaFold2_2021,zheng_ESM_2024,abramson_AlphaFold3_2024}. Yet the biological objects these models describe~---~a single low-energy structure in an unspecified solvent at an unspecified temperature~---~are idealizations. Real proteins exist as weighted ensembles of interconverting states, and those weights are influenced by a variety of factors that include temperature, ionic strength, osmolytes, ligand occupancy, and binding partners~\cite{bowman_Introduction_2026,olsson_Generative_2026,janson_Generation_2025}. Current protein design tools are severely constrained by their limited ability to model these population shifts.
+
+\textbf{1.2 Recent generative models show that ensemble prediction is tractable, but no existing model simultaneously handles multi-biomolecule complexes and explicit environmental conditioning.} Building on the pioneering work of BioEmu \cite{lewis_Scalable_2025}, the Boltzmann "emulator" model aSAMt~\cite{janson_Deep_2025a} successfully generated temperature-conditioned ensembles of monomer structures that roughly approximate the corresponding Boltzmann distributions. Boltzmann generator models, which explicitly generate or re-weight ensembles to match underlying Boltzmann distributions, have been demonstrated for systems of small molecules in explicit solvent, but have yet to be applied to systems on the scale of large proteins~\cite{aggarwal_BoltzNCE_2025,gloy_HollowFlow_2025,diez_BOLTZMANN_2025}. Ensemble generation models have been developed for protein--protein \cite{wang_Exploring_2024}, protein--ligand \cite{qiao_Statespecific_2024}, and RNA systems \cite{li_DynaRNA_2025}, but are not conditioned on environmental variables like temperature. To our knowledge, no deep learning model has been published that can predict structural ensembles for biomolecule complexes in the context of the surrounding environment. \uline{We therefore propose developing \textbf{Environment-Conditioned Complex Dynamics (\ECCD)}, a novel generative model that will predict weighted ensembles of all-atom structures for arbitrary protein--DNA--RNA--ligand assemblies across varying temperatures and solute concentrations}.
+
+\textbf{1.3 Two disease-relevant systems motivate and validate the approach.} \emph{FASTKD2} is a 77\,kDa mitochondrial RNA-binding protein essential for maturation of mt-mRNA ND6, and for assembly of the mitochondrial large ribosomal subunit~\cite{popow_FASTKD2_2015,antonicka_Mitochondrial_2015,antonicka_Pseudouridine_2017}. Loss-of-function variants have been found to cause infantile mitochondrial encephalomyopathy~\cite{ghezzi_FASTKD2_2008}. Its structure has not been experimentally determined. It binds substrates with temperature-dependent folding patterns in an environment where temperatures can reach 50 \textdegree C \cite{chrétien_Mitochondria_2018}, making it an intriguing target for validating temperature-dependent conformational shifts in a protein--RNA complex. \emph{Human serine racemase} (hSR) is a 37\,kDa PLP-dependent enzyme that generates D-serine and has been implicated in ALS, Alzheimer's disease, schizophrenia, and ischemic brain injury~\cite{mozzarelli_EnergyLandscape_2018,basu_Targeted_2009,smith_Structure_2010}. Under physiological conditions, hSR exists in a monomer$\leftrightarrow$dimer$\leftrightarrow$tetramer equilibrium with most of the population in the catalytically active dimer state ~\cite{smith_Structure_2010,bruno_Regulation_2017}. Many small molecules, including ATP, Mg$^{2+}$/Ca$^{2+}$, NaCl, and NADH, have been shown to shift this equilibrium ~\cite{bruno_Regulation_2017}. Crystal structures of the dimer (the only structurally resolved oligomer) further revealed an open/closed conformational switch in the active site \cite{mozzarelli_EnergyLandscape_2018}. hSR exemplifies the class of allosterically regulated enzymes that current structure-prediction pipelines cannot adequately describe, as the relevant biology is determined by condition-dependent shifts in these population weights.
+
+\textbf{1.4 This project will produce three durable resources}: (i) a validated generative Boltzmann emulator for complexes; (ii) a collection of new MD simulation data for a variety of biomolecules and conditions; (iii) the first conditions-axis cryo-EM benchmark for multi-molecule complexes.  Together, these establish the foundation for a future R01 to build a dynamics- and conditions-aware foundation model capable of designing allosterically regulated enzymes \textit{de novo}.
+
+\newpage
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{fig_aims.pdf}
+\caption{An outline of the proposal. Aim 1 builds a temperature-conditioned ensemble generator (\ECCD 1.0) validated on FASTKD2--mt-RNA and hSR T-series cryo-EM. Aim 2 extends the generator to ligands and solutes (\ECCD 1.1) and adds an energy-based probability oracle for Boltzmann reweighting. Novel components are underlined.}
+\label{fig:aims}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{fig_model.pdf}
+\caption{The architecture of ECCD. Components implemented in Aim 1 are green, and components implemented in Aim 2 are pink/purple. Input boxes have black borders, and output boxes have blue borders. Dotted arrows indicate modules that are trained on active learning data.}
+\label{fig:model}
+\end{figure}
+
+\FloatBarrier
+% ============================================================================
+\section{Innovation}
+% ============================================================================
+
+\textbf{2.1 Extension to multi-biomolecule complexes.} To our knowledge, prior ensemble generators are limited to proteins (and a few small molecules)~\cite{lewis_Scalable_2025,janson_Deep_2025a,jin_P2DFlow_2025,qiao_Statespecific_2024}, and prior multi-biomolecule generators are static~\cite{abramson_AlphaFold3_2024,hayes_Simulating_2025,passaro_Boltz2_2025}. We combine the multi-biomolecule prior of a frozen AlphaFold3-class encoder with a highly efficient partially-latent flow-matching module (based on La-Proteina~\cite{geffner_LaProteina_2025}) to create a generative model with both capabilities.
+
+\textbf{2.2 Environmental conditions as explicit, learnable inputs rather than nuisance variables.} Temperature and a full solvent vector (solute SMILES embeddings~\cite{singh_ChemBERTa3_2025}, molecule properties, concentrations, bulk ionic descriptors) are learned inputs that modulate the flow trunk via Attention Bias and AdaLN. 
+
+\textbf{2.3 Generative Boltzmann reweighting at protein-complex scales.} Generative models trained for unbiased Boltzmann reweighting (including Boltzmann generators~\cite{noe_BoltzmannGenerators_2019}, BoltzNCE~\cite{aggarwal_BoltzNCE_2025}, sequential Boltzmann generators~\cite{tan_Scalable_2026}, and others) have been demonstrated only on small molecules and short peptides. Extension to larger systems remains an open challenge: transferable Boltzmann generators defer scaling to future work \cite{diez_BOLTZMANN_2025,chen_CoarseGrained_2026}, and the most recent sequential Boltzmann generator demonstrated incomplete convergence on Chignolin \cite{tan_Scalable_2026}. Boltzmann emulators such as BioEmu~\cite{lewis_Scalable_2025} generate ensembles for full-length proteins but do not perform unbiased Boltzmann reweighting, instead depending on the learned distribution to provide a sufficiently accurate approximation \cite{olsson_Generative_2026}. In Aim 2, we introduce a conditions-aware BoltzNCE-style EBM that, for the first time, provides probability-based Boltzmann reweighting for systems at the scale of protein--nucleic-acid complexes ($>$500 residues) \cite{aggarwal_BoltzNCE_2025}. This is enabled by three architectural choices: (i) a hierarchical GVP-based GNN that aggregates atom-level energies to residue-level tokens \cite{pengmei_Hierarchical_2025}, which decreases the number of nodes by ~8x while preserving essential information; (ii) a hybrid DSM + NCE training objective that eliminates the Jacobian-trace cost~\cite{aggarwal_BoltzNCE_2025}; and (iii) partition-function matching against experimental $\Delta G$ values (inspired by PPFT in \cite{lewis_Scalable_2025}) to anchor the absolute energy scale without requiring enumeration of the full Boltzmann partition function.
+
+\textbf{2.4 A two-regime ensemble representation compatible with downstream design pipelines.} In addition to the standard ensemble output, a structured tuple list of (representative macrostate structure, Boltzmann-weighted frequency, confidence), and a cumulative frequency of unfolded structures are provided. This format meets the input requirements of a future dynamics-aware foundation model and aligns with the output of cryo-EM 3D classification~\cite{punjani_3DVA_2021,punjani_3DFlex_2023,zhong_CryoDRGN_2021}, which provides direct ground-truth validation.
+
+\textbf{2.5 First condition-axis benchmarks for complexes.} The cryo-EM datasets of FASTKD2--mt-RNA across a temperature series and a Mg$^{2+}$ /NaCl/ PEG matrix, and hSR variants across temperature and an ATP/ Mg$^{2+}$/ Ca$^{2+}$/ glycine/ NADH/ malonate matrix, will be the first public benchmarks of conformational population shifts as a function of environment for multi-molecule assemblies.
+
+
+% ============================================================================
+\section{Approach}
+% ============================================================================
+
+
+\textbf{3.1 Overview and Rationale} The two Aims are sequenced so that Aim 1 establishes a temperature-conditioned, multi-biomolecule ensemble emulator (\uline{\ECCD 1.0}) using flow matching alone. Aim 2 then extends the framework to ligands and the full solution-state conditions vector (\uline{\ECCD 1.1}), introducing the energy-based model as a probability oracle only after the flow architecture is stable and sufficient training data are available (Figure~\ref{fig:aims}). Each Aim couples a focused computational milestone to a concrete cryo-EM validation campaign on the same two systems. Because the co-PI's laboratory maintains dedicated experimental infrastructure and the institutional Krios cryo-EM facility is supported through existing funds, computational and experimental work proceed in parallel. All GPU training will run on the PI's institutional A100/H100/H200/L40S/B200 allocation (A100: 120  ns/gpu/day (1000 residues) - 2000 ns/gpu/day (200 residues) $\rightarrow$  8 converged trajectories/node/day on average (450 residues, 500 ns to converge) $\rightarrow$ 2900 trajectories with 2 nodes for 6mo).
+
+\textbf{3.2 Rigor and transparency} We follow the ensemble-evaluation conventions of comparable models but expand hold-out criteria to include \uline{sequence homology ($<$30\% identity) and structure homology (TM-score $<$\,0.5)}, to prevent data leakage. Every experimental cryo-EM dataset is processed through a fixed cryoSPARC pipeline~\cite{punjani_cryoSPARC_2017} with 3D classification~\cite{punjani_3DVA_2021} and, where flexibility dominates, 3DFlex~\cite{punjani_3DFlex_2023} and cryoDRGN~\cite{zhong_CryoDRGN_2021}. Model predictions are locked \emph{before} unblinding cryo-EM populations at each condition. \emph{Primary evaluation metric:} ECCD-generated structures are encoded into the cryoDRGN latent space trained on experimental particle images, and kernel maximum mean discrepancy (MMD) is computed between predicted and experimental latent distributions at each condition~\cite{zhong_CryoDRGN_2021}. MMD provides a two-sample statistical test with a well-defined significance threshold, avoiding arbitrary cutoffs and preserving continuous heterogeneity information. Per-state free energy errors ($\Delta\Delta G$ MAE, kcal/mol) derived from 3D classification populations are reported as a secondary metric where discrete states are resolvable.
+
+% ---------------------------------------------------------------------------
+\textbf{3.3 Aim 1 --- Temperature-Conditioned Ensemble Emulator for Protein--RNA--DNA Complexes (ECCD 1.0)}
+% ---------------------------------------------------------------------------
+
+\textbf{3.3.1 Hypothesis} A flow-matching generator conditioned on (i) a frozen AF3-class encoder representation and (ii) temperature, trained on MD plus experimental thermodynamic data with a PPFT-style consistency loss~\cite{lewis_Scalable_2025}, predicts T-dependent population shifts in protein--RNA complexes that are statistically consistent with cryo-EM heterogeneity distributions (Section~3.2).
+
+\textbf{3.3.2 Computational Strategy}
+
+
+\textbf{3.3.2.1 Architecture} (three coupled modules, green elements in Figure~\ref{fig:model}):
+
+\begin{enumerate}
+\item \textbf{Frozen AF3-class biomolecular encoder} We use OpenFold3~\cite{theopenfold3team_OpenFold3preview_2025} as a frozen encoder for single and pair representations of proteins, RNA, DNA, and explicit ligands. The encoder is run once per input and cached.
+
+\item \textbf{Partially-latent flow-matching trunk} (La-Proteina-style~\cite{geffner_LaProteina_2025}). Per-residue explicit anchors (C$\alpha$ for protein, C1$'$ for nucleotides) and ligand atoms in Cartesian space; a fixed-dim learned latent per residue captures sequence, sidechains, sugar pucker, and base, with per-atom ligand tokens. A non-equivariant transformer trunk enables throughput at 800+ residues. All training structures are aligned to the center of mass and randomly rotated; the model learns to generate aligned structures, and the output is post hoc re-rotated to the original frame. This is a standard approach in flow-based structure generation~\cite{lewis_Scalable_2025,janson_Deep_2025a,geffner_LaProteina_2025} that eliminates the need for expensive SE(3)-equivariant architectures while still learning a full 6D distribution.
+
+\item \textbf{Conditioning pathway} The flow module conditions on input environment conditions, and the single/pair OF3 representations. The single representation tokens are appended to the initial autoencoded vector on a per-token basis. The flow module is conditioned via AdaLN-Zero on \textit{t}, the single representation, and an embedded environmental conditions vector. The conditions embedding vector is generated by a small transformer block running over the featurized temperature and per-solute concentration, ChemBERTa-3 SMILES embedding~\cite{singh_ChemBERTa3_2025}, standard molecular properties, and ionic bulk descriptors. Additionally, the flow attention logits are biased by the OF3 pair representation and the conditions embedding with a learned scaling factor. While solute conditions will not be a focus of Aim 1 training, available conditions data for MD trajectories and static structures will still be included in training.
+
+\item \textbf{Output heads} Embedded samples are decoded into full-atom structures. A pretrained, frozen slow-CV encoder (BioEmu-CV-style~\cite{liu_Memory_2025,mehdi_Enhanced_2024}) embeds generated samples; KDE clustering in CV space assigns samples to macrostates. Macrostate frequencies are simple normalized counts of generated samples in each macrostate bin. A universal folded/unfolded soft classifier sorts samples (parameters are adjustable). The final output consists of tuples of (macrostate structure, frequency) of folded macrostates, and the summed frequency of unfolded macrostates. A confidence score is assigned to each macrostate, based on the normal variance of the RMSD of a sample and its macrostate center, divided by the RMSD of that sample and the next-closest macrostate center. This captures both the tightness of the macrostate cluster and the separation between clusters, providing a normalized confidence metric that can be compared across conditions and systems.
+
+\end{enumerate} 
+
+\textbf{3.3.2.2 External data sources} \emph{Public MD for pretraining} mdCATH (multi-temperature) \cite{mirarchi_mdCATH_2024}, BioEmu's reweighted set~\cite{lewis_Scalable_2025}, MDVerse (DNA, RNA,  protein) \cite{tiemann_MDverse_2024}, DynaRepo (protein--nucleic acid) \cite{mokhtari_DynaRepo_2026}, MDRepo (protein--RNA) \cite{roy_MDRepo_2025}, PPB-Affinity (protein--protein) \cite{liu_PPBAffinity_2024},  PLAS-20k (protein--ligand, for Aim 2) \cite{korlepara_PLAS20k_2024}. Additional resources: MDBind \cite{libouban_Spatiotemporal_2025}, ATLAS \cite{vandermeersche_ATLAS_2024}. \emph{Experimental thermodynamic anchoring} MEGAscale (protein $\Delta G_\text{fold}$) \cite{tsuboyama_Megascale_2023}, SKEMPI 2.0 \cite{jankauskaitė_SKEMPI_2019} (protein--protein), R-SIM \cite{ramaswamykrishnan_RSIM_2023} (RNA--ligand), PNATDB \cite{mei_Thermodynamic_2023} (protein--nucleic acid), scraped and curated melting curves, $T_m$-values, experimental structural ensembles \cite{berman_protein_2000}. Additional resources: FireProtDB (protein $\Delta G_\text{fold}$) \cite{musil_FireProtDB_2026} , RBPDB \cite{cook_RBPDB_2011}, ProNIT \cite{kumar_ProTherm_2006} (protein--nucleic acid), R-Bind \cite{donlic_RBIND_2022}. \emph{Structural priors} OF3 training data (implicit)\cite{theopenfold3team_OpenFold3preview_2025}, AFESM \cite{dinh_Compressing_2026}, RMDB \cite{cordero_RNA_2012}. \emph{Validation} Fast-folding MD trajectories by DE Shaw research group \cite{lewis_Scalable_2025}, cryo-EM Conformational Heterogeneity datasets \cite{astore_Inaugural_2025}, and held-out test data from training datasets. \uline{All validation/benchmark targets filtered from training by sequence ($<$30\% identity) and structural homology (TM-score $<$ 0.5)}.
+
+\textbf{3.3.2.3 MD simulation methods} \emph{Force fields} \uline{ff19SB} for proteins (a99SB-disp where IDRs are involved); \uline{OL3 + gHBfix21} for RNA (the current best per 2025 benchmarks); \uline{OL21} for DNA; \uline{GAFF2 with AM1-BCC charges} for ligands (OpenFF Sage 2.x alternative); \uline{Joung-Cheatham + Panteva-York 12-6-4} parameters for Mg$^{2+}$ ions; \uline{OPC} water for standard conditions, TIP4P-D for disordered systems, TIP4P/2005 for cold-temperature regimes. \emph{Sampling Method} \uline{Gaussian accelerated MD (GaMD)} \cite{copeland_Gaussian_2022} to generate preliminary MD data for low-data regimes (RNA, DNA, multi-molecule complex); \uline{On-the-fly Probability Enhanced Sampling (OPES)} along identified CVs for active learning data collection~\cite{mehdi_Enhanced_2024}. All simulations are reweighted to the Boltzmann ensemble and incorporated into the training pool on a regular cycle. The CV head is re-trained independently as needed. \emph{RNA Force-field Limitations} RNA force fields remain a significant source of uncertainty. OL3CP-gHBfix21 is the best available but has known limitations on tertiary structure and non-canonical base-pair populations \cite{mlýnský_Can_2025}. We therefore prioritize integrating all available experimental data (cryo-EM class populations, NMR data, SHAPE reactivities, FRET distributions, melting curves, etc) to fine-tune both the flow and (in Aim 2) the EBM against ground truth, rather than relying on MD alone to represent the RNA conformational landscape. For force-field-sensitive systems (RNA monomers, RNA--protein complexes), we will additionally explore the following: 1) using alternative force fields for sequences with motifs that are known to be problematic for gHBfix21; and 2) reweighting classical-MD trajectories against energies from machine-learned interatomic potentials (MLIPs) such as UMA, again focusing first on sequences with known force field issues to maximize the potential benefit of MLIP reweighting.
+
+\textbf{3.3.2.4 Losses} (i) Flow-matching loss over MD frames and static PDB structures~\cite{geffner_LaProteina_2025, lewis_Scalable_2025,dinh_Compressing_2026}. (ii) Autoencoder/decoder pretraining. (iii) Slow-CV head (BioEmuCV-style) pretraining on MD \cite{park_Learning_2026}. (iv) \uline{PPFT-style consistency loss} between predicted macrostate frequencies and experimental $\Delta G$ / melting-curve / binding affinity data~\cite{lewis_Scalable_2025}. The EBM is deferred to Aim 2 to keep Aim 1's training stable.
+
+\textbf{3.3.2.5 Active learning loop} The active learning loop targets ensembles with high training loss, low confidence scores, and condition-space novelty (under-covered temperatures). MD simulations of the identified systems are run with OPES along the relevant CVs, reweighted, and then added to the training pool. The CV head is re-trained as needed to capture new macrostates. We expect the number of AL cycles to be determined by the time frame outlined in the milestones below, rather than by a fixed number of cycles or a convergence criterion.
+
+
+\textbf{3.3.3 Experimental Validation} \textit{Led by co-PI, proceeds in parallel to computational work}\label{sec:aim1exp}
+
+\textbf{3.3.3.1 Selected Variables}
+
+\textbf{hSR:} \emph{Sequence Variants} WT-replacement \uline{C2D/C6D} has similar $K_m$ (7.7\,mM vs 6.5\,mM WT), malonate inhibition, and structural properties as the wild-type, but superior expression \cite{smith_Structure_2010}. The mutation \uline{S84A } abolishes racemization while preserving $\beta$-elimination ~\cite{hoffman_Human_2016}. This variant probes the open/closed active site conformations. The \uline{Q89A} mutation disrupts the H-bond network coupling the ATP site to the active site, reducing allosteric regulation \cite{mozzarelli_EnergyLandscape_2018}. It is included to provide a baseline for Aim 2 experiments.  \textbf{FASTKD2}: \emph{RNA Substrates} A \uline{16S fragment} sufficient for binding is included to provide clean single-particle data. The \uline{ND6 3$'$UTR} is the most well-characterized FASTKD2 substrate and includes a G-quadruplex that may be relevant to binding and function~\cite{antonicka_Pseudouridine_2017}. The \uline{full-length 16S mt-rRNA}, included to assess ECCD's transferability to larger complexes and to provide the most biologically relevant data, albeit with the risk of increased heterogeneity and lower resolution.  \textbf{Both}: \emph{Temperature} \uline{4, 25, 37, 50\,\textdegree C} to span cold, physiological, and hot conditions. hSR's melting temperature can fall above or below 50\,\textdegree C, subject to solute conditions~\cite{bruno_Regulation_2017}.
+
+\textbf{3.3.3.2 Sample preparation} Protein constructs will be produced using an \emph{E.~coli}-based cell-free protein synthesis (CFPS) system from linear DNA templates. hSR is purified with Ni-NTA + SEC in the presence of PLP, and reconstituted with Mg$^{2+}$~\cite{bruno_Regulation_2017}. All preparations are screened by SEC-MALS and mass photometry, providing orthogonal validation of the hSR oligomeric equilibrium and FASTKD2 assembly state.
+
+\textbf{3.3.3.3 Cryo-EM T-series data} \emph{Data Collection} For each variable combination, grids are heated/cooled to equilibrium temperatures of \uline{4, 25, 37, and 50\,\textdegree C} using the Vitrobot heated/cooled chamber. Samples are plunged, blotted, screened, and collected on the institutional Krios. \emph{Data Processing} cryoSPARC~\cite{punjani_cryoSPARC_2017} (CTF, particle picking, 2D, ab initio, heterogeneous refinement, 3D classification~\cite{punjani_3DVA_2021}). 3DFlex~\cite{punjani_3DFlex_2023} applied where continuous flexibility dominates; cryoDRGN~\cite{zhong_CryoDRGN_2021} as cross-check.
+
+\textbf{3.3.4 Risks and alternatives.} \emph{FASTKD2 full-length insoluble in CFPS:} fall back to domain-truncated constructs (FAST1+FAST2 or RAP alone) using redesigned linear DNA templates~\cite{popow_FASTKD2_2015}. \emph{3D classification fails to resolve distinct states:} increase class count, apply 3DFlex; compare \ECCD predictions against continuous latent-space densities. \emph{FASTKD2 expression or imaging fails completely:} switch to human Suv3, a homodimer RNA helicase found in the mitochondria that was imaged in multiple conformations with cryo-EM (and expressed with E. coli), but was not imaged across different temperatures \cite{patra_Asymmetric_2026}. \emph{T-conditioning generalization weak:} add T-replicas to AL loop; add aSAMt-style pretraining~\cite{janson_Deep_2025a}. \emph{RNA and DNA predictions are poor:} prioritize experimental anchoring (melting curves, SHAPE, cryo-EM populations), reweight relevant MD trajectories against MLIP energies, conduct additional AL cycles for problematic systems.
+
+\textbf{3.3.5 Criteria for model success.} \emph{High Probability of Success} \ECCD 1.0 reaches parity with aSAMt~\cite{janson_Deep_2025a}, BioEmu \cite{lewis_Scalable_2025}, and P2DFlow \cite{jin_P2DFlow_2025} on published monomer benchmarks. T-conditioned hSR predicted ensembles are statistically consistent with experimental cryoDRGN latent distributions across the T-series (kernel MMD test, $p > 0.05$), with per-state $\Delta\Delta G$ MAE $< 1.0$\,kcal/mol (${\sim}1.7\,kT$) where discrete states are resolved by 3D classification. \emph{Lower Probability of Success} \ECCD 1.0 is competitive on published RNA-puzzle benchmarks and T-conditioned FASTKD2--RNA predicted ensembles are statistically consistent with experimental cryoDRGN latent distributions (MMD $p > 0.05$), with per-state $\Delta\Delta G$ MAE $< 1.5$\,kcal/mol.
+
+\textbf{3.3.6 Expected outcomes.} (a) First experimental structures of hSR tetramers and FASTKD2--mt-RNA assemblies are collected. (b) Validated \ECCD 1.0 predicts T-dependent population shifts. (c) All experimental and computational data, and relevant code and model weights, are made publicly available. (d) A paper describing the model architecture and performance on benchmarks is published.
+
+
+% ---------------------------------------------------------------------------
+\textbf{3.4 Aim 2 --- Conditions-Aware Emulator with Ligands and Solutes (\ECCD 1.1)}
+% ---------------------------------------------------------------------------
+
+\textbf{3.4.1 Hypothesis.} Extending \ECCD 1.0 with an explicit solvent encoder, two ligand-handling modes, and a co-trained conditions-aware EBM yields a generative emulator that predicts cryo-EM-validated ligand occupancies and condition-dependent oligomeric structure of hSR and FASTKD2--mt-RNA across a realistic solute matrix.
+
+\textbf{3.4.2 Computational Strategy Updates} (two pink modules in Figure~\ref{fig:model})
+
+\textbf{3.4.2.1 Energy-based model addition.} We implement a hierarchical GNN (GVP-based backbone with atom$\rightarrow$residue aggregation and a transformer token-mixer) within the BoltzNCE architecture. It uses denoising score-matching and noise-contrastive estimation to map structure to an energy-weighted likelihood \cite{pengmei_Hierarchical_2025,aggarwal_BoltzNCE_2025}. It is conditioned on the same OF3 and conditions embeddings as the flow module, using similar conditioning architecture. In addition to weighted MD data, partition-function-matching losses against experimental $\Delta G$ values are used to anchor free energies. At inference, the EBM provides consistent probabilities for each sampled structure without running Jacobian-trace costs~\cite{gloy_HollowFlow_2025,aggarwal_BoltzNCE_2025}. In ECCD 1.1, the probabilities take the place of structure counts when calculating macrostate frequencies. As noted in Innovation, this is the first application of Boltzmann reweighting to a generative model at the protein-complex scale.
+
+\textbf{3.4.2.2 Remove MSA reliance from OF3 encoder.} Fine-tune the OpenFold3 encoder to replace expensive and slow MSA inputs with \uline{SynCodonLM}~\cite{heuschkel_Advancing_2026} embeddings via a small transformer adapter, AdaLN-Zero insertion between Pairformer blocks, and LoRA layers within blocks. Removing MSA dependence could improve generalization towards novel sequences, and would reduce inference latency sufficient to allow ECCD to be integrated into a future foundation model.
+
+\textbf{3.4.2.3 Stabilized flow--EBM co-training.} Unconstrained joint training exhibits mode-collapse instabilities analogous to GANs~\cite{rotskoff_Sampling_2024}. We use: (a) \emph{Separate Initial Training} The flow module trains without the EBM as described in Aim 1, and the EBM then trains alone on the same set of MD and $\Delta G$ data (with frozen weights for the conditions encoder); (b) \emph{Alternating updates} 5--10 flow steps per EBM step and a scaled-down learning rate; (c) \emph{Complementary losses} EBM updates use DSM on MD + NCE against current flow + partition-function matching; flow updates use flow matching + energy guidance + PPFT consistency~\cite{diez_BOLTZMANN_2025,chen_CoarseGrained_2026}.
+
+\textbf{3.4.2.4 Training Data Expansion.} MD data is generated as-needed to cover gaps in solute condition space before the active learning phase, following the Aim 1 protocols. Experimental datasets expand to include ligand binding affinity data, and PPFT losses are now applied to ligand-binding macrostates as well as conformational macrostates.
+
+\textbf{3.4.3 Experimental Validation}
+
+\textbf{3.4.3.1 Selected Variables} 
+
+\textbf{hSR:} \emph{Ligands} \uline{ATP} is the primary allosteric regulator of hSR, increasing activity up to 100-fold and shifting the oligomeric equilibrium ~\cite{bruno_Regulation_2017}. \uline{Mg$^{2+}$} is the physiological cofactor and \uline{Ca$^{2+}$} is a known inhibitor that competes with Mg$^{2+}$ for binding but does not support catalysis~\cite{bruno_Regulation_2017}, providing a critical test of ECCD's ability to capture differential ligand effects. \uline{NADH} is an endogenous metabolite that disrupts ATP cooperativity without directly competing for the ATP site~\cite{bruno_Regulation_2017}, providing a test of ECCD's ability to capture allosteric effects that are not mediated by direct competition. \uline{Glycine} competes with \uline{serine} for the active site. \uline{Malonate}  is a competitive inhibitor. \emph{Solutes} \uline{NaCl (5 / 25 / 150\,mM)} is included to probe the salt-dependent monomer$\rightarrow$dimer$\rightarrow$tetramer shift~\cite{bruno_Regulation_2017}.  \textbf{FASTKD2:} \emph{Solutes} \uline{Mg$^{2+}$ (0.5 / 2 / 10\,mM)}, \uline{NaCl (50 / 150 / 300\,mM)}, and \uline{PEG (0 / 5 / 10\% w/v)} are included to probe the salt- and crowding-dependent assembly and conformational equilibria of the FASTKD2--mt-RNA complexes.  \textbf{Both:} \emph{Temperature} T-series are repeated to probe the coupling between temperature and ligand/solute effects.
+
+Data collection and processing follow the same protocols as Aim 1.
+
+\textbf{3.4.4 Risks and alternatives.} \emph{EBM pre-training fails:} Explore 1) adding an additional hierarchical layer to the GNN, compressing per-residue tokens into per-region tokens; 2) replacing computationally expensive triangular SE(3) layers with non-equivariant self-attention layers, increasing training steps while scaling down per-step compute. \emph{Flow--EBM training fails:} fall back to KDE-only clustering, with no EBM reweighting. \emph{SynCodonLM underperforms:} replace with ESM3 embeddings \cite{hayes_Simulating_2025}. \emph{MSA removal fails:} revert to the unmodified OF3 encoder. \emph{Condition-matrix cryo-EM yields uninterpretable heterogeneity:} use SEC-MALS, mass photometry, and CD/DSC thermograms as population readouts.
+
+\textbf{3.4.5 Criteria for model success.} \emph{High Probability of Success} \ECCD 1.1 predicted ensembles are statistically consistent with experimental cryoDRGN latent distributions for hSR across the ligand/solute/temperature matrix (kernel MMD test, $p > 0.05$), with per-state $\Delta\Delta G$ MAE $< 1.0$\,kcal/mol where discrete states are resolvable. Ligand docking and co-folding is on par with Boltz2 \cite{passaro_Boltz2_2025}. \emph{Lower Probability of Success} \ECCD 1.1 predicted ensembles are statistically consistent with experimental cryoDRGN latent distributions for FASTKD2--RNA across the temperature/solute matrix (MMD $p > 0.05$), with per-state $\Delta\Delta G$ MAE $< 1.5$\,kcal/mol. Protein--ligand, Protein--Protein, Protein--DNA, and Protein--RNA $\Delta G_{\text{bind}}$ predictions have a Pearson correlation of $>$0.5 against experimental values, and are superior to the respective state-of-the-art models for each interaction type.
+
+\textbf{3.4.6 Expected outcomes.} (a) First conditions-matrix cryo-EM data for hSR with multiple allosteric and competitive ligands. (b) First conditions-matrix cryo-EM data for FASTKD2 complexed with 16S and ND6. (c) \ECCD 1.1 with validated ligand occupancy and condition-axis generalization. (d) All experimental and computational data, and relevant code and model weights, are made publicly available. (e) A paper describing the updated model architecture and performance on benchmarks is published.
+
+\textbf{3.5 Timeline and Milestones}
+
+\textbf{Year 1 (Aim 1).} Months 1--4: Order DNA templates of hSR, FASTKD2, 16S and ND6; create the flow module training harness and active learning pipeline. Collect and process training data; run MD simulations for under-represented biomolecules. Train collective encoder and flow trunk autoencoder. Months 5--10: Begin cryo-EM data collection for Aim 1. Train \ECCD 1.0. Begin active learning cycle. Write training harnesses for EBM and the OF3 encoder. Month 11: Halt active learning, lock \ECCD 1.0 weights, unblind cryo-EM populations, and evaluate ensemble predictions. Evaluate against relevant held-out data. Begin EBM pre-training and OF3 fine-tuning. Month 12: Finalize and submit first manuscript on \ECCD 1.0 and T-series cryo-EM. Begin condition-matrix cryo-EM data collection.
+
+\textbf{Year 2 (Aim 2).} Months 13--20: Co-train flow and EBM. Begin active learning for ligands and solutes. Month 21: Halt active learning, lock \ECCD 1.1 weights, and evaluate against cryo-EM and held-out datasets. Months 22--24: Finalize and submit manuscript for ECCD 1.1; prepare R01 proposal~\cite{didi_Scaling_2026}.
+
+\textbf{3.6 Implications for a Follow-on R01: De Novo Design of Allosterically Regulated Enzymes.} The two outputs of this R21~---~a conditions-aware ensemble generator and a differentiable conditions-aware energy function~---~are the key inputs for modern test-time-compute protein design workflows~\cite{didi_Scaling_2026,ahern_Atom_2025,butcher_novo_2025,wang_DPLM2_2024a,shuai_Ensembleconditioned_2025}. ECCD also outputs a "compressed" format (metastable structures and weighted frequencies) that would be necessary to tractably train a dynamics- and conditions-aware foundation model. Furthermore, if ECCD adequately models DNA, RNA, and ligands, the resulting foundation model could extend beyond protein design to include DNA strands, custom small molecules, and RNA molecules such as ribozymes. The follow-on R01 would train and apply this foundation model, leveraging ECCD 1.1 (and its differentiable EBM) in a test-time design pipeline. Design targets of the R01 could include a sensor protein for a specific metabolite or pollutant, an allosterically regulated ribozyme that is activated by a specific ligand, or a peptide that binds to a specific DNA sequence only under conditions localized to a particular tissue or disease state.
+
+
+
+
+
+% ============================================================================
+\printbibliography
+% ============================================================================
+
+\end{document}

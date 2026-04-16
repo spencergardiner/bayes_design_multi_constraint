@@ -1,0 +1,65 @@
+% ============================================================================
+%  R21 Specific Aims — NIH NIGMS
+%  Environment-Conditioned Boltzmann Emulator for Macromolecular Assemblies
+% ============================================================================
+%
+%  Compile: xelatex specific_aims ; biber specific_aims ; xelatex x2
+%  Bibliography: Dissertation.bib
+%
+%  NIH R21: 1-page limit for Specific Aims
+%  11 pt Arial/Helvetica, 0.5" margins, single-spaced
+% ============================================================================
+
+\documentclass[11pt]{article}
+
+% --- NIH-compatible geometry ------------------------------------------------
+\usepackage[letterpaper,margin=0.5in]{geometry}
+
+% --- Fonts (Helvetica for Arial-compatible look) ----------------------------
+\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[T1]{fontenc}
+
+% --- Packages ---------------------------------------------------------------
+\usepackage[expansion=false,protrusion=true]{microtype}
+\usepackage{enumitem}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\usepackage[style=numeric,backend=biber,sorting=none]{biblatex}
+\addbibresource{Dissertation.bib}
+
+% --- Compact spacing --------------------------------------------------------
+\singlespacing
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+\setlist{nosep,leftmargin=1.2em}
+
+% --- Section heading styling ------------------------------------------------
+\titleformat{\section}{\normalsize\bfseries}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{6pt}{2pt}
+
+% ============================================================================
+\begin{document}
+
+\begin{center}
+{\large\bfseries SPECIFIC AIMS}\\[2pt]
+{\small\itshape Learning an Environment-Conditioned Landscape for Equilibrium Structures of Macromolecular Assemblies}
+\end{center}
+
+Protein function is determined by sequence, dynamic structure, and environmental conditions. Deep learning networks have significantly expanded the reach and impact of protein engineering pipelines, but remain limited by poor modeling of structural dynamics and environmental conditions such as temperature, ligands, solutes, and interactions with other biomolecules. Effectively modeling the relationship between sequence, structure, and environment could unlock new insights into cellular processes and mechanisms of disease, and multiply the capabilities of \textit{de novo} protein design platforms across new dimensions. To date, no computationally tractable framework exists for environment-conditioned equilibrium ensembles for complexes of multiple biomolecules. We propose a novel generative Boltzmann Emulator model that will predict a weighted ensemble of structures for complexes of proteins, DNA, RNA, and ligands, subject to the conditions of temperature and solute concentrations. We will develop and validate the model on two biologically distinct systems, outlined in these aims:
+
+\textbf{Aim 1: Develop a temperature-conditioned ensemble emulator for protein, RNA, and DNA complexes, and validate it on FASTKD2--mt-RNA assemblies and human serine racemase (hSR) complexes.}
+FASTKD2 is a 77\,kDa mitochondrial RNA-binding protein essential for 16S mt-rRNA and ND6 mRNA processing, with no experimental structures across its FAST1, FAST2, and RAP domains. Mitochondrial RNA granules are temperature-sensitive, and the AU-rich mitochondrial transcriptome exhibits strongly T-dependent folding. hSR is a 37\,kDa homodimer that catalyzes PLP-dependent L-serine $\leftrightarrow$ D-serine interconversion and has been implicated in ALS, Alzheimer's disease, schizophrenia, and other diseases. Its dimer/tetramer equilibrium is likely affected by temperature shifts.
+We will synthesize isolates of known hSR variants and preparations of FASTKD2 with defined mt-RNA substrates, collect single-particle cryo-EM data across a physiologically relevant temperature series, and use 3D classification to resolve T-dependent population shifts. We will then assess the emulator on these data.
+
+\emph{Expected Outcome:} Cryo-EM datasets of hSR and FASTKD2--mt-RNA complexes across a physiologically relevant temperature series, and a Boltzmann Emulator model that predicts weighted ensembles of protein--protein and protein--RNA complexes conditioned on temperature.
+
+\textbf{Aim 2: Extend the emulator to generate ligand structures and condition on solute concentrations, then validate.}
+hSR has many allosteric binders (ATP, Mg$^{2+}$ vs Ca$^{2+}$, glycine, and NADH) and several known inhibitors and activators. We will collect cryo-EM data for hSR across a matrix of ligands, solutes, temperatures, and known variants. We will also collect data for FASTKD2--mt-RNA complexes across a matrix of conditions likely to alter structures and binding: Mg$^{2+}$, NaCl, and PEG. We will then assess the updated model on the new datasets.
+
+\emph{Expected Outcome:} Cryo-EM structures of hSR and FASTKD2--mt-RNA complexes across a range of temperatures \emph{and} solute concentrations, and a conditions-aware emulator that generates weighted ensembles containing ligands.
+
+\textbf{Impact and Innovation.} This work advances generative structural modeling along five coupled axes where the field is currently blocked: (1) extension from monomers to complexes; (2) multi-molecule generality spanning complexes of proteins, DNA, RNA, and ligands; (3) environmental conditioning with temperature and solute concentration as explicit inputs rather than nuisance variables; (4) tractable Boltzmann reweighting of generated ensembles for large biomolecular systems; and (5) experimental datasets of conformation shifts across conditioning axes, suitable for benchmarking model performance. Success delivers robust cryo-EM and MD datasets across two modalities of biomolecular complexes in varying environmental conditions, and a conditional Boltzmann emulator for multi-molecule complexes. In a follow-up R01 study, this model and its outputs could form the basis for a dynamics- and environment-aware protein foundation model capable of modeling and designing allosterically regulated macromolecular machines across the NIGMS mission.
+
+\end{document}
